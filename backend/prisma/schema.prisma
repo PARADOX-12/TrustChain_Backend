@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          Role      @default(USER)
+  walletAddress String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  drugs         Drug[]    @relation("Manufacturer")
+  batches       Batch[]   @relation("Creator")
+  transactions  Transaction[]
+}
+
+enum Role {
+  ADMIN
+  MANUFACTURER
+  DISTRIBUTOR
+  REGULATOR
+  PHARMACY
+  USER
+}
+
+model Drug {
+  id              String    @id @default(uuid())
+  name            String
+  description     String?
+  ndc             String    @unique // National Drug Code
+  manufacturer    User      @relation("Manufacturer", fields: [manufacturerId], references: [id])
+  manufacturerId  String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  batches         Batch[]
+}
+
+model Batch {
+  id              String    @id @default(uuid())
+  batchNumber     String    @unique
+  drug            Drug      @relation(fields: [drugId], references: [id])
+  drugId          String
+  quantity        Int
+  manufactureDate DateTime
+  expiryDate      DateTime
+  creator         User      @relation("Creator", fields: [creatorId], references: [id])
+  creatorId       String
+  status          BatchStatus @default(CREATED)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  transactions    Transaction[]
+}
+
+enum BatchStatus {
+  CREATED
+  IN_TRANSIT
+  DELIVERED
+  VERIFIED
+  DISPENSED
+  RECALLED
+}
+
+model Transaction {
+  id              String    @id @default(uuid())
+  batch           Batch     @relation(fields: [batchId], references: [id])
+  batchId         String
+  fromUser        User      @relation(fields: [fromUserId], references: [id])
+  fromUserId      String
+  toAddress       String?   // Could be a wallet address or other identifier
+  transactionType TransactionType
+  blockchainTxId  String?   // Blockchain transaction ID if applicable
+  status          TransactionStatus @default(PENDING)
+  metadata        Json?     // Additional data about the transaction
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+enum TransactionType {
+  MANUFACTURE
+  SHIP
+  RECEIVE
+  VERIFY
+  DISPENSE
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
