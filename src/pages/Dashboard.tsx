@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -20,11 +19,15 @@ import ShipmentTable from '@/components/dashboard/ShipmentTable';
 import SupplyChainTimeline from '@/components/dashboard/SupplyChainTimeline';
 import DeliveryPerformance from '@/components/dashboard/DeliveryPerformance';
 import QuickActions from '@/components/dashboard/QuickActions';
+import DrugRegistrationForm from '@/components/DrugRegistrationForm';
+import BatchRegistrationForm from '@/components/BatchRegistrationForm';
 import { useToast } from '@/hooks/use-toast';
 import { shipmentData, timelineData, analyticsData, statusColors, statusIcons, roleSpecificData } from '@/data/dashboardData';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAuth } from '@/contexts/AuthContext';
 
 const Dashboard = () => {
+  const { user } = useAuth();
   const [role, setRole] = useState('Manufacturer');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
@@ -72,19 +75,17 @@ const Dashboard = () => {
       
       <main className="flex-grow py-6 px-4 sm:px-6 lg:px-8 mt-20">
         <div className="max-w-7xl mx-auto">
-          <Tabs defaultValue={role} onValueChange={setRole} className="w-full mb-6">
-            <TabsList className={`grid ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-4'} w-full`}>
-              <TabsTrigger value="Manufacturer">Manufacturer</TabsTrigger>
-              <TabsTrigger value="Distributor">Distributor</TabsTrigger>
-              <TabsTrigger value="Regulator">Regulator</TabsTrigger>
-              <TabsTrigger value="Pharmacy">Pharmacy</TabsTrigger>
-            </TabsList>
-            
-            <div className="mt-6">
-              <h1 className="text-2xl md:text-3xl font-bold text-navy">{currentRoleData.title}</h1>
-              <p className="text-navy text-opacity-70">{currentRoleData.description}</p>
+          <div className="mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-navy">Dashboard</h1>
+            {/* <p className="text-navy text-opacity-70">{currentRoleData.description}</p> */}
+          </div>
+
+          {user?.role === 'manufacturer' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <DrugRegistrationForm />
+              <BatchRegistrationForm />
             </div>
-          </Tabs>
+          )}
 
           <DashboardCards 
             totalShipments={totalShipments}
