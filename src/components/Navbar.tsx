@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Menu, X, LogOut, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -87,9 +86,11 @@ const Navbar = () => {
           <Link to="/dashboard" className={`text-navy text-sm font-medium hover-link ${location.pathname === '/dashboard' ? 'font-bold' : ''}`}>
             Dashboard
           </Link>
-          <Link to="/drug-authentication" className={`text-navy text-sm font-medium hover-link ${location.pathname === '/drug-authentication' ? 'font-bold' : ''}`}>
-            Drug Authentication
-          </Link>
+          {isAuthenticated && (
+            <Link to="/drug-authentication" className={`text-navy text-sm font-medium hover-link ${location.pathname === '/drug-authentication' ? 'font-bold' : ''}`}>
+              Drug Authentication
+            </Link>
+          )}
           {user?.role === 'admin' && (
             <Link to="/admin" className={`text-navy text-sm font-medium hover-link ${location.pathname === '/admin' ? 'font-bold' : ''}`}>
               Admin Panel
@@ -164,12 +165,14 @@ const Navbar = () => {
           >
             Dashboard
           </Link>
-          <Link
-            to="/drug-authentication"
-            className={`text-navy text-lg font-medium border-b border-gray-100 pb-2 ${location.pathname === '/drug-authentication' ? 'font-bold' : ''}`}
-          >
-            Drug Authentication
-          </Link>
+          {isAuthenticated && (
+            <Link
+              to="/drug-authentication"
+              className={`text-navy text-lg font-medium border-b border-gray-100 pb-2 ${location.pathname === '/drug-authentication' ? 'font-bold' : ''}`}
+            >
+              Drug Authentication
+            </Link>
+          )}
           {user?.role === 'admin' && (
             <Link
               to="/admin"

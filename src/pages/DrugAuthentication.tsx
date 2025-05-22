@@ -1,14 +1,17 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { QrCode, Check, AlertTriangle, FileText, Database, Shield, X, RotateCw, Sparkles } from "lucide-react";
+import { QrCode, Check, AlertTriangle, FileText, Database, Shield, X, RotateCw, Sparkles, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import BlockchainAnimation from '@/components/BlockchainAnimation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { BlockchainService } from '@/lib/blockchain';
+import QRCodeGenerator from '@/components/QRCodeGenerator';
+import { Html5Qrcode } from 'html5-qrcode';
+import { useAuth } from '@/contexts/AuthContext';
 
 type VerificationStatus = 'idle' | 'scanning' | 'verifying' | 'verified' | 'counterfeit';
 
@@ -25,8 +28,11 @@ const DrugAuthentication = () => {
   const [status, setStatus] = useState<VerificationStatus>('idle');
   const [progress, setProgress] = useState(0);
   const [drugDetails, setDrugDetails] = useState<DrugDetails | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
   const { toast } = useToast();
   const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, size: number, color: string}>>([]);
+  const { isAuthenticated, user } = useAuth();
 
   // Create floating particles effect
   useEffect(() => {
@@ -45,86 +51,143 @@ const DrugAuthentication = () => {
     }
   }, [status]);
 
-  // Simulate QR code scanning process
-  const handleScanClick = () => {
-    setStatus('scanning');
-    setProgress(0);
-    
-    // Show toast notification
-    toast({
-      title: "Scanning started",
-      description: "Positioning QR code for scanning...",
-      variant: "default",
-    });
-    
-    // Simulate scanning progress
-    const scanInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(scanInterval);
-          simulateVerification();
-          return 100;
-        }
-        return prev + 10;
+  // Handle QR code scanning process
+  const handleScanClick = async () => {
+    try {
+      setShowScanner(true);
+      setStatus('scanning');
+      setProgress(0);
+
+      // Request camera permissions
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(track => track.stop()); // Stop the stream after getting permission
+
+      // Initialize scanner
+      if (!scannerRef.current) {
+        scannerRef.current = new Html5Qrcode("qr-reader");
+        
+        // Start scanning
+        await scannerRef.current.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+          },
+          handleScanResult,
+          handleScanError
+        );
+      }
+
+      toast({
+        title: "Camera Ready",
+        description: "Position the QR code within the frame",
+        variant: "default",
       });
-    }, 200);
+    } catch (error) {
+      console.error('Camera access error:', error);
+      setShowScanner(false);
+      setStatus('idle');
+      toast({
+        title: "Camera Access Denied",
+        description: "Please allow camera access to scan QR codes",
+        variant: "destructive",
+      });
+    }
   };
 
-  // Simulate verification process with the blockchain
-  const simulateVerification = () => {
-    setStatus('verifying');
-    setProgress(0);
-    
-    // Show toast notification
-    toast({
-      title: "Verification in progress",
-      description: "Connecting to blockchain network...",
-      variant: "default",
-    });
-    
-    // Simulate verification progress
-    const verifyInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(verifyInterval);
-          // Randomly determine if drug is genuine or counterfeit (for demo purposes)
-          const isGenuine = Math.random() > 0.3;
+  // Handle QR code scan result
+  const handleScanResult = async (decodedText: string) => {
+    if (decodedText) {
+      // Stop scanning
+      if (scannerRef.current) {
+        await scannerRef.current.stop();
+        scannerRef.current = null;
+      }
+      
+      setShowScanner(false);
+      setStatus('verifying');
+      setProgress(0);
+      
+      try {
+        // Parse the QR code data (assuming it contains the batch number)
+        const batchNumber = decodedText;
+        
+        // Check batch status
+        const statusResponse = await BlockchainService.getBatchStatus(batchNumber);
+        const isVerified = await BlockchainService.isBatchVerified(batchNumber);
+        
+        if (isVerified) {
+          const transactions = await BlockchainService.getBatchTransactions(batchNumber);
+          const latestTransaction = transactions[transactions.length - 1];
           
-          if (isGenuine) {
-            setDrugDetails({
-              name: "Amoxicillin 500mg",
-              manufacturer: "PharmaHealth Inc.",
-              batchNumber: "BTC20230928",
-              manufactureDate: "2023-06-15",
-              expiryDate: "2025-06-15",
-              transactionHash: "0x7cB8E5c9c5C5a6b7F4e4d3E2c1B0A9D8C7B6E5F4",
-            });
-            setStatus('verified');
-            toast({
-              title: "Verification Successful",
-              description: "The drug is authentic and verified on the blockchain.",
-              variant: "default",
-            });
-          } else {
-            setStatus('counterfeit');
-            toast({
-              title: "Verification Failed",
-              description: "This drug may be counterfeit. Please do not use.",
-              variant: "destructive",
-            });
-          }
-          return 100;
+          setDrugDetails({
+            name: "Amoxicillin 500mg", // This would come from the blockchain in a real implementation
+            manufacturer: "PharmaHealth Inc.",
+            batchNumber: batchNumber,
+            manufactureDate: new Date().toISOString().split('T')[0],
+            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            transactionHash: latestTransaction?.transactionHash || "0x...",
+          });
+          
+          setStatus('verified');
+          toast({
+            title: "Verification Successful",
+            description: "The drug is authentic and verified on the blockchain.",
+            variant: "default",
+          });
+        } else {
+          setStatus('counterfeit');
+          toast({
+            title: "Verification Failed",
+            description: "This drug may be counterfeit. Please do not use.",
+            variant: "destructive",
+          });
         }
-        return prev + 5;
-      });
-    }, 100);
+      } catch (error) {
+        console.error('Verification error:', error);
+        setStatus('counterfeit');
+        toast({
+          title: "Verification Error",
+          description: "Failed to verify the drug. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
   };
+
+  // Handle scan error
+  const handleScanError = (error: string) => {
+    console.error('Scan error:', error);
+    // Don't show error toast for every failed scan attempt
+    if (error.includes('No MultiFormat Readers were able to detect the code')) {
+      return;
+    }
+    toast({
+      title: "Scanning Error",
+      description: "Failed to access camera. Please check permissions.",
+      variant: "destructive",
+    });
+  };
+
+  // Cleanup scanner on unmount
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(console.error);
+      }
+    };
+  }, []);
 
   // Reset the verification process
-  const handleReset = () => {
+  const handleReset = async () => {
+    if (scannerRef.current) {
+      await scannerRef.current.stop();
+      scannerRef.current = null;
+    }
     setStatus('idle');
     setProgress(0);
     setDrugDetails(null);
+    setShowScanner(false);
   };
 
   return (
@@ -170,7 +233,7 @@ const DrugAuthentication = () => {
             </CardHeader>
             <CardContent className="p-6">
               <div className={`aspect-square max-w-md mx-auto relative border-2 ${status === 'idle' ? 'border-dashed border-gray-300' : 'border-blue-400'} rounded-lg flex items-center justify-center ${status === 'scanning' ? 'animate-pulse' : ''}`}>
-                {status === 'idle' && (
+                {status === 'idle' && !showScanner && (
                   <div className="text-center p-6">
                     <div className="p-6 bg-navy/5 rounded-full mx-auto mb-4 w-32 h-32 flex items-center justify-center">
                       <QrCode className="h-20 w-20 text-navy/40" />
@@ -179,17 +242,8 @@ const DrugAuthentication = () => {
                   </div>
                 )}
                 
-                {status === 'scanning' && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-full h-full relative">
-                      <div className="absolute inset-0 bg-blue-50 opacity-20"></div>
-                      <div className="absolute inset-0 border-4 border-blue-400 rounded-lg shadow-[0_0_25px_rgba(30,174,219,0.6)]"></div>
-                      <div className="absolute h-1 bg-blue-400 w-full top-1/2 animate-pulse"></div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <RotateCw className="h-16 w-16 text-blue-500 animate-spin" />
-                      </div>
-                    </div>
-                  </div>
+                {showScanner && (
+                  <div id="qr-reader" className="w-full h-full"></div>
                 )}
                 
                 {status === 'verifying' && (
@@ -236,9 +290,9 @@ const DrugAuthentication = () => {
               )}
             </CardContent>
             <CardFooter className="flex justify-center gap-4 p-6 bg-gradient-to-r from-navy/5 to-emerald/5">
-              {status === 'idle' && (
+              {status === 'idle' && !showScanner && (
                 <Button onClick={handleScanClick} className="bg-navy hover:bg-navy/90 transition-all animate-bounce-slow">
-                  <QrCode className="mr-2 h-4 w-4" /> Start Scanning
+                  <Camera className="mr-2 h-4 w-4" /> Start Scanning
                 </Button>
               )}
               
@@ -355,6 +409,17 @@ const DrugAuthentication = () => {
               </div>
             </div>
           </div>
+
+          {/* QR Code Generator Section - Conditionally rendered */}
+          {isAuthenticated && user?.role === 'manufacturer' && (
+            <div className="mt-8">
+              <h2 className="text-2xl font-bold mb-4 text-navy flex items-center">
+                <QrCode className="mr-2 h-5 w-5 text-emerald" />
+                Generate Test QR Code
+              </h2>
+              <QRCodeGenerator />
+            </div>
+          )}
         </div>
       </div>
       <Footer />

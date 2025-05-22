@@ -8,6 +8,7 @@ import { rateLimit } from 'express-rate-limit';
 // Import routes
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
+import blockchainRoutes from './routes/blockchain.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 
 // Load environment variables
@@ -15,7 +16,7 @@ dotenv.config();
 
 // Initialize express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Apply middleware
 app.use(cors());
@@ -36,6 +37,7 @@ app.use(limiter);
 // Define routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/blockchain', blockchainRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
