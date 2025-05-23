@@ -125,4 +125,16 @@ export class BlockchainService {
             throw error;
         }
     }
+
+    static async getBatchDetails(batchNumber: string) {
+        try {
+            const response = await axios.get(`${API_URL}/batches/${batchNumber}`, {
+                headers: this.getHeaders()
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error getting batch details:', error);
+            throw error;
+        }
+    }
 } 

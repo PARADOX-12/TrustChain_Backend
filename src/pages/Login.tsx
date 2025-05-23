@@ -112,11 +112,11 @@ const Login = () => {
               Demo accounts:
             </p>
             <div className="text-xs text-gray-500 space-y-1">
-              <p>Admin: admin@example.com / password</p>
-              <p>Manufacturer: manufacturer@example.com / password</p>
-              <p>Distributor: distributor@example.com / password</p>
-              <p>Regulator: regulator@example.com / password</p>
-              <p>Pharmacy: pharmacy@example.com / password</p>
+            <p>Admin: admin@example.com / AdminPassword123</p>
+              <p>Manufacturer: testuser@example.com / TestPassword123</p>
+              <p>Distributor: contact@globalpharmadist.com / GlobalPharma@2024</p>
+              <p>Regulator: regulator@example.com / RegulatorPass456</p>
+              <p>Pharmacy: pharmacy@example.com / PharmacyPass789</p>
             </div>
           </CardFooter>
         </Card>

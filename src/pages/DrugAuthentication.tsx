@@ -120,13 +120,16 @@ const DrugAuthentication = () => {
           const transactions = await BlockchainService.getBatchTransactions(batchNumber);
           const latestTransaction = transactions[transactions.length - 1];
           
+          // Get batch details from blockchain
+          const batchDetails = await BlockchainService.getBatchDetails(batchNumber);
+          
           setDrugDetails({
-            name: "Amoxicillin 500mg", // This would come from the blockchain in a real implementation
+            name: batchDetails.drugName,
             manufacturer: "PharmaHealth Inc.",
             batchNumber: batchNumber,
-            manufactureDate: new Date().toISOString().split('T')[0],
-            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            transactionHash: latestTransaction?.transactionHash || "0x...",
+            manufactureDate: new Date(batchDetails.manufactureDate * 1000).toISOString().split('T')[0],
+            expiryDate: new Date(batchDetails.expiryDate * 1000).toISOString().split('T')[0],
+            transactionHash: batchDetails.transactionHash,
           });
           
           setStatus('verified');

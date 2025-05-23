@@ -215,8 +215,8 @@ export const loginWithMetamask = async (
             data: {
                 user: userWithoutPassword,
             },
-        });
-    } catch (error) {
-        next(error);
-    }
+    });
+  } catch (error) {
+    next(error);
+  }
 };
