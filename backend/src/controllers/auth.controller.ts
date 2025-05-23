@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 import { AppError } from '../middleware/error.middleware.js';
 import { z } from 'zod';
 
@@ -35,6 +35,11 @@ export const register = async (
   next: NextFunction
 ) => {
   try {
+    // Convert role to uppercase before validation
+    if (req.body.role) {
+      req.body.role = req.body.role.toUpperCase();
+    }
+
     // Validate request body
     const validatedData = registerSchema.parse(req.body);
 
@@ -56,7 +61,9 @@ export const register = async (
         name: validatedData.name,
         email: validatedData.email,
         password: hashedPassword,
-        role: validatedData.role || 'USER',
+        role: validatedData.role 
+                ? Role[validatedData.role.toUpperCase() as keyof typeof Role] || Role.USER // Convert and check against Prisma Role enum
+                : Role.USER, // Default to USER if role is not provided
         walletAddress: validatedData.walletAddress,
       },
     });
@@ -157,4 +164,59 @@ export const resetPassword = async (
   } catch (error) {
     next(error);
   }
+};
+
+// MetaMask login
+export const loginWithMetamask = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const { walletAddress } = req.body;
+
+        if (!walletAddress) {
+            return next(new AppError('Wallet address is required', 400));
+        }
+
+        // Find user by wallet address
+        const user = await prisma.user.findUnique({
+            where: { walletAddress: walletAddress.toLowerCase() } as any, // Cast to any temporarily to satisfy type checker
+        });
+
+        // Check if user exists
+        if (!user) {
+            // Decide behavior: return error or auto-register
+            // For now, let's return an error if not found. Auto-registration can be added later if needed.
+             return next(new AppError('User not found with this wallet address. Please register.', 404));
+            // Or for auto-registration (example - needs careful consideration of defaults):
+            // const newUser = await prisma.user.create({
+            //     data: {
+            //         walletAddress: walletAddress.toLowerCase(),
+            //         role: Role.USER, // Default role
+            //         // Provide default or placeholder values for required fields like name, email, password
+            //         name: 'MetaMask User', 
+            //         email: `metamask_user_${Date.now()}@example.com`, // Placeholder email
+            //         password: 'default_password_change_me' // Placeholder password
+            //     }
+            // });
+            // user = newUser; // Use the newly created user
+        }
+
+        // Generate JWT token
+        const token = signToken(user.id);
+
+        // Remove password from response (even if using placeholder, good practice)
+        const { password, ...userWithoutPassword } = user;
+
+        res.status(200).json({
+            status: 'success',
+            token,
+            data: {
+                user: userWithoutPassword,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
 };

@@ -161,4 +161,19 @@ export class BlockchainController {
             res.status(500).json({ error: 'Failed to check batch verification' });
         }
     }
+
+    async getShipments(req: Request, res: Response) {
+        try {
+            // Assuming user is attached to the request by the protect middleware
+            const user = (req as any).user;
+            if (!user) {
+                return res.status(401).json({ error: 'User not authenticated' });
+            }
+            const shipments = await blockchainService.getShipments(user);
+            res.json({ shipments });
+        } catch (error) {
+            console.error('Error in getShipments controller:', error);
+            res.status(500).json({ error: 'Failed to get shipments' });
+        }
+    }
 } 
