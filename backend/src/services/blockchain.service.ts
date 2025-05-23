@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import 'dotenv/config'
 import DrugVerificationArtifact from '../../artifacts/contracts/DrugVerification.sol/DrugVerification.json' assert { type: 'json' };
 import { PrismaClient } from '@prisma/client';
 
@@ -12,6 +13,7 @@ export class BlockchainService {
     constructor() {
         // Initialize provider with Sepolia network
         this.provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
+        console.log('Sepoilia:', process.env.PRIVATE_KEY);
         
         // Initialize wallet with private key
         this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, this.provider);

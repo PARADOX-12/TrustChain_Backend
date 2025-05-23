@@ -10,7 +10,7 @@ export class BlockchainController {
             const { name, ndc, description } = req.body;
             const result = await blockchainService.registerDrug(name, ndc, description);
             res.json(result);
-        } catch (error) {
+        }catch (error) {
             res.status(500).json({ error: 'Failed to register drug' });
         }
     }

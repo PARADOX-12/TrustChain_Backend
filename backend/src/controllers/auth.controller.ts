@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
+import 'dotenv/config'
 import jwt from 'jsonwebtoken';
 import { PrismaClient, Role } from '@prisma/client';
 import { AppError } from '../middleware/error.middleware.js';
@@ -215,8 +216,8 @@ export const loginWithMetamask = async (
             data: {
                 user: userWithoutPassword,
             },
-        });
-    } catch (error) {
-        next(error);
-    }
+    });
+  } catch (error) {
+    next(error);
+  }
 };
