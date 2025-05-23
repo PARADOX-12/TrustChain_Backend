@@ -10,6 +10,7 @@ router.post('/drugs', protect, restrictTo('MANUFACTURER'), blockchainController.
 
 // Batch Management
 router.post('/batches', protect, restrictTo('MANUFACTURER'), blockchainController.registerBatch.bind(blockchainController));
+router.get('/batches/:batchNumber', protect, blockchainController.getBatchDetails.bind(blockchainController));
 
 // Supply Chain Tracking
 router.post('/batches/ship', protect, blockchainController.shipBatch.bind(blockchainController));
