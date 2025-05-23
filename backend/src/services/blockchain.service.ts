@@ -61,6 +61,106 @@ export class BlockchainService {
     }
 
     // Supply Chain Tracking
+    async getShipments(user: any) {
+        try {
+            let batches;
+            const userRole = user.role.toUpperCase();
+            const userAddress = user.walletAddress; // Assuming walletAddress is available on the user object
+
+            switch (userRole) {
+                case 'MANUFACTURER':
+                    // Fetch batches created by this manufacturer
+                    batches = await prisma.batch.findMany({
+                        where: {
+                            manufacturerAddress: userAddress,
+                        },
+                        include: { // Include related Drug info if available
+                             drug: true,
+                             transactions: { // Include transactions
+                                 orderBy: {
+                                     createdAt: 'desc' // Order by creation date descending to get the latest
+                                 },
+                                 take: 1 // Take only the latest transaction
+                             }
+                        }
+                    });
+                    break;
+                case 'DISTRIBUTOR':
+                    // Fetch batches currently held by this distributor or shipped to them
+                    // This logic might need refinement based on how shipments are tracked.
+                    // Assuming currentHolderAddress indicates possession.
+                    batches = await prisma.batch.findMany({
+                        where: {
+                            currentHolderAddress: userAddress,
+                        },
+                         include: {
+                             drug: true,
+                              transactions: { // Include transactions
+                                 orderBy: {
+                                     createdAt: 'desc'
+                                 },
+                                 take: 1
+                             }
+                         }
+                    });
+                    break;
+                case 'PHARMACY':
+                    // Fetch batches currently held by this pharmacy or shipped to them
+                    batches = await prisma.batch.findMany({
+                        where: {
+                            currentHolderAddress: userAddress,
+                        },
+                         include: {
+                             drug: true,
+                              transactions: { // Include transactions
+                                 orderBy: {
+                                     createdAt: 'desc'
+                                 },
+                                 take: 1
+                             }
+                         }
+                    });
+                    break;
+                case 'REGULATOR':
+                    // Regulators might view all batches, or a subset.
+                    // For now, let's assume they can see all.
+                     batches = await prisma.batch.findMany({
+                         include: {
+                             drug: true,
+                              transactions: { // Include transactions
+                                 orderBy: {
+                                     createdAt: 'desc'
+                                 },
+                                 take: 1
+                             }
+                         }
+                     });
+                    break;
+                default:
+                    // Default case for other roles or no role - perhaps no shipments or an error
+                    batches = [];
+                    break;
+            }
+
+            // Map Prisma Batch objects to the Shipment interface
+            const shipments = batches.map((batch: any) => ({
+                id: batch.id, // Assuming batch has an ID field
+                batchNumber: batch.batchNumber,
+                product: batch.drug?.name || 'Unknown Product', // Assuming drug relationship exists and has a name
+                status: batch.currentStatus, // Assuming currentStatus field exists
+                origin: batch.manufacturerAddress, // Assuming manufacturer is the origin for initial listing
+                destination: batch.currentHolderAddress, // Assuming current holder is the current destination
+                date: batch.updatedAt ? batch.updatedAt.toISOString() : new Date().toISOString(), // Assuming updatedAt or a similar timestamp exists
+                transactionHash: batch.transactions[0]?.blockchainTxId || 'N/A', // Get the blockchainTxId from the latest transaction
+            }));
+
+            return shipments;
+        } catch (error) {
+            console.error('BlockchainService: Error getting shipments:', error);
+            throw error;
+        }
+    }
+
     async shipBatch(batchNumber: string, to: string) {
         try {
             const tx = await this.contract.shipBatch(batchNumber, to);

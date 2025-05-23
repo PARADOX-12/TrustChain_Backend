@@ -31,6 +31,7 @@ router.post('/authorize/pharmacy', protect, restrictTo('ADMIN'), blockchainContr
 router.post('/authorize/regulator', protect, restrictTo('ADMIN'), blockchainController.authorizeRegulator.bind(blockchainController));
 
 // View Functions
+router.get('/shipments', protect, blockchainController.getShipments.bind(blockchainController));
 router.get('/batches/:batchNumber/status', protect, blockchainController.getBatchStatus.bind(blockchainController));
 router.get('/batches/:batchNumber/transactions', protect, blockchainController.getBatchTransactions.bind(blockchainController));
 router.get('/batches/:batchNumber/verified', protect, blockchainController.isBatchVerified.bind(blockchainController));
