@@ -28,6 +28,7 @@ export class BlockchainController {
             );
             res.json(result);
         } catch (error) {
+            console.error('Error in registerBatch:', error);
             res.status(500).json({ error: 'Failed to register batch' });
         }
     }
@@ -174,6 +175,17 @@ export class BlockchainController {
         } catch (error) {
             console.error('Error in getShipments controller:', error);
             res.status(500).json({ error: 'Failed to get shipments' });
+        }
+    }
+
+    async getBatchDetails(req: Request, res: Response) {
+        try {
+            const { batchNumber } = req.params;
+            const batchDetails = await blockchainService.getBatchDetails(batchNumber);
+            res.json(batchDetails);
+        } catch (error) {
+            console.error('Error in getBatchDetails:', error);
+            res.status(500).json({ error: 'Failed to get batch details' });
         }
     }
 } 

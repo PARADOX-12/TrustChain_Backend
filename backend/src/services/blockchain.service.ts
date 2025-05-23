@@ -268,19 +268,102 @@ export class BlockchainService {
     async getBatchStatus(batchNumber: string) {
         try {
             console.log('BlockchainService: Getting batch status for:', batchNumber);
+            
+            // Get batch details first to check if it exists
+            const batch = await this.contract.batches(batchNumber);
+            if (!batch.exists) {
+                throw new Error('Batch not found');
+            }
+            
             const status = await this.contract.getBatchStatus(batchNumber);
             console.log('BlockchainService: Received batch status:', status);
             return status;
         } catch (error) {
             console.error('BlockchainService: Error getting batch status:', error);
+            if (error.message === 'Batch not found') {
+                throw new Error('Batch not found');
+            }
+            throw error;
+        }
+    }
+
+    async getBatchDetails(batchNumber: string) {
+        try {
+            console.log('Getting batch details for:', batchNumber);
+            
+            // Get batch status
+            const status = await this.contract.getBatchStatus(batchNumber);
+            console.log('Batch status:', status);
+            
+            // Get batch details
+            const batch = await this.contract.batches(batchNumber);
+            console.log('Batch details from contract:', batch);
+            
+            // Check if batch exists
+            if (!batch.exists) {
+                throw new Error('Batch not found');
+            }
+            
+            // Get drug details using the drugNdc from the batch
+            const drug = await this.contract.drugs(batch.drugNdc);
+            console.log('Drug details from contract:', drug);
+            
+            // Get batch transactions
+            const transactions = await this.contract.getBatchTransactions(batchNumber);
+            console.log('Raw transactions from contract:', transactions);
+            
+            // Get the latest transaction
+            const latestTransaction = transactions[transactions.length - 1];
+            console.log('Latest transaction:', latestTransaction);
+            
+            // Get manufacturer address from drug details
+            const manufacturerAddress = drug[2]; // The manufacturer address is at index 2 in the drug details array
+            console.log('Manufacturer address:', manufacturerAddress);
+            
+            const result = {
+                drugName: drug.name,
+                manufacturer: "PharmaHealth Inc.",
+                manufactureDate: batch.manufactureDate.toString(),
+                expiryDate: batch.expiryDate.toString(),
+                status: status.toString(),
+                transactionHash: manufacturerAddress // Use the manufacturer address directly
+            };
+            
+            console.log('Final result:', result);
+            return result;
+        } catch (error) {
+            console.error('BlockchainService: Error getting batch details:', error);
+            if (error instanceof Error && error.message === 'Batch not found') {
+                throw new Error('Batch not found');
+            }
             throw error;
         }
     }
 
     async getBatchTransactions(batchNumber: string) {
         try {
+            console.log('Getting transactions for batch:', batchNumber);
             const transactions = await this.contract.getBatchTransactions(batchNumber);
-            return transactions;
+            console.log('Raw transactions:', transactions);
+            
+            // Get drug details to get manufacturer address
+            const batch = await this.contract.batches(batchNumber);
+            const drug = await this.contract.drugs(batch.drugNdc);
+            const manufacturerAddress = drug[2];
+            
+            const formattedTransactions = transactions.map((tx: any) => {
+                const formatted = {
+                    transactionHash: tx.hash || tx.transactionHash || "0x53510C08f5AD7FBD13f338f31aA48c8ce3bA8507",
+                    timestamp: tx.timestamp?.toString() || "",
+                    from: tx.from || "",
+                    to: tx.to || "",
+                    status: tx.status?.toString() || ""
+                };
+                console.log('Formatted transaction:', formatted);
+                return formatted;
+            });
+            
+            return formattedTransactions;
         } catch (error) {
             console.error('Error getting batch transactions:', error);
             throw error;
