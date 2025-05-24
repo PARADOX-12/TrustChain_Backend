@@ -198,16 +198,28 @@ export const loginWithMetamask = async (
             //         // Provide default or placeholder values for required fields like name, email, password
             //         name: 'MetaMask User', 
             //         email: `metamask_user_${Date.now()}@example.com`, // Placeholder email
-            //         password: 'default_password_change_me' // Placeholder password
+            //         password: 'temporary_password' // Temporary password - consider a better approach for passwordless login
             //     }
             // });
-            // user = newUser; // Use the newly created user
+
+            // // Generate JWT token for auto-registered user
+            // const token = signToken(newUser.id);
+
+            // const { password, ...userWithoutPassword } = newUser;
+
+            // res.status(201).json({
+            //     status: 'success',
+            //     token,
+            //     data: {
+            //         user: userWithoutPassword,
+            //     },
+            // });
         }
 
         // Generate JWT token
         const token = signToken(user.id);
 
-        // Remove password from response (even if using placeholder, good practice)
+        // Remove password from response
         const { password, ...userWithoutPassword } = user;
 
         res.status(200).json({
@@ -216,8 +228,8 @@ export const loginWithMetamask = async (
             data: {
                 user: userWithoutPassword,
             },
-    });
-  } catch (error) {
-    next(error);
-  }
+        });
+    } catch (error) {
+        next(error);
+    }
 };

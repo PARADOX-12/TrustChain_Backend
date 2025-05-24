@@ -95,55 +95,55 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setError(null);
     
     try {
-      // Check if MetaMask is installed
-      if (typeof window.ethereum === 'undefined') {
-        throw new Error('MetaMask is not installed');
-      }
-
-      // Request account access
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      
-      if (accounts.length === 0) {
-        throw new Error('No accounts found');
-      }
-
-      const walletAddress = accounts[0];
-      
-      // Call backend Metamask login API (you may need to implement this endpoint)
-      // For now, we'll still use a mock response structure, but you'd replace this
-      const response = await axios.post('http://localhost:3000/api/auth/login-metamask', { walletAddress }); // Assuming a Metamask login endpoint
-
-      const { token, data: { user: userData } } = response.data;
-      
-       const user: User = {
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        role: userData.role.toLowerCase(), // Ensure role is lowercase
-        walletAddress: userData.walletAddress,
-      };
-      
-      setUser(user);
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('token', token); // Store the token
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`; // Set default auth header
-      
-      toast({
-        title: "Login successful with MetaMask",
-        description: `Connected with wallet: ${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)} as ${user.role}`,
-      });
-
-    } catch (err) {
-      setError((err as any).response?.data?.message || (err as Error).message || 'An unexpected error occurred'); // Better error handling
-      toast({
-        title: "MetaMask login failed",
-        description: (err as any).response?.data?.message || (err as Error).message || 'An unexpected error occurred', // Use backend error message
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+    // Check if MetaMask is installed
+    if (typeof window.ethereum === 'undefined') {
+      throw new Error('MetaMask is not installed');
     }
-  };
+
+    // Request account access
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    
+    if (accounts.length === 0) {
+      throw new Error('No accounts found');
+    }
+
+    const walletAddress = accounts[0];
+    
+    // Here, you would typically validate this wallet address on your backend
+    // and return the user's role based on the address
+    // For demo purposes, we'll assign a random role
+    const roles: ('admin' | 'manufacturer' | 'distributor' | 'regulator' | 'pharmacy')[] = [
+      'admin', 'manufacturer', 'distributor', 'regulator', 'pharmacy'
+    ];
+    const randomRole = roles[Math.floor(Math.random() * roles.length)];
+    
+    const user: User = {
+      id: '3',
+      email: 'wallet@example.com',
+      name: 'Wallet User',
+      role: randomRole,
+      walletAddress: walletAddress
+    };
+    
+    setUser(user);
+    localStorage.setItem('user', JSON.stringify(user));
+    
+    toast({
+      title: "Login successful with MetaMask",
+      description: `Connected with wallet: ${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)} as ${randomRole}`,
+    });
+  } catch (err) {
+    setError((err as Error).message);
+    toast({
+      title: "MetaMask login failed",
+      description: (err as Error).message,
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   // Logout
   const logout = () => {
